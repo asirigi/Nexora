@@ -1,0 +1,10 @@
+
+go to chat seek doc folder for frontend
+npm install
+npm run dev
+
+(.nexora_venv) uvicorn backend.api.fastapi_app:app --reload --port 8000
+or
+
+uvicorn backend.main:app --reload --port 8000
+
