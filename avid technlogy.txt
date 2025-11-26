@@ -1,0 +1,31 @@
+&lt;unknown&gt;
+
+<!-- image -->
+
+## GLOBAL TERMS AND CONDITIONS
+
+- Structure These Global Terms and Conditions ("Global Terms and Conditions") are incorporated by reference into each country-specific Master Services Agreement entered into by Customer and the applicable Digital Realty entity (each; a 'Country MSA") . The terms "Customer" and "Digital Realty" are defined in the applicable Country MSA Customer and Digital Realty may enter into orders (whether executed by manual or electronic   signature or via Digital   Realty's online   ordering platform; each an "Order"), each of which incorporates the terms of the applicable Country MSA and constitutes separate and distinct contract for data center-related services andlor products to be provided by Digital Realty to Customer ("Services"), as more particularly set forth on each Order. An Order; together with MSA and these Global Terms and Conditions; is referred to as the "Agreement. Services may not be ordered, activated, or used by Customer, unless and until an applicable Country MSA and these Global Terms and Conditions are executed
+
+## 2
+
+- (a) Agreement Term The initial term of each Agreement (i.e the period to any Extension Term as defined below) is defined in the Country MSA. These Global Terms and Conditions will continue to be effective so long as at least one Order and applicable Country MSA are in effect. prior
+- (b) Commencement Date. The "Commencement Date" is the date designated in an Order as the commencement date or billing   commencement date; provided that if installations are required the Commencement Date will be the earlier of (i) the date Digital Realty completes the applicable pre-Commencement Date installations and delivers notice of completion to the Customer or (ii) the date Customer occupies the Customer Area or begins using a Service. In either case; Digital Realty will inform Customer of the actual Commencement Date. Services may have different Commencement Dates under the same Order; in which case billing will commence for each Service upon the date that such individual Service has commenced.
+- (c) Extensions Except as otherwise set forth in an Agreement; the Term (as defined below) will automatically extend for subsequent 1-year period(s) (each; an Extension Term' on the same terms unless Digital Realty or Customer provides written notice to the other party of its decision not to extend at least 120 calendar days prior to the expiration of the then current Term The initial   term and any Extension   Term(s) as applicable;   shall collectively be referred to as the Term
+
+## 3. Right to Use Customer Area and Services.
+
+(a) Right to Use\_ During the applicable Term; Digital Realty   (i)  grants to Customer non-transferable   (except as otherwise provided in Section 14(c)), non-sub licensable; limited right to deploy computer; networking;   communication; security and other systems; and associated racks; wiring;   cabling and materials (collectively; Equipment' in the space described in the Order ("Customer Area") at the building identified in an Order ("Building"); and (ii) will   provide or cause to be provided to Customer the Service(s) set forth in the Order; in each case, for the internal business and operations of Customer and subject to other provisions ofthe Agreement:.  The portion of the Building used to furnish data center Services; within which the applicable Customer Area is located is known as a Data Center"' or "Suite' The owner; landlord or ground lessee of a Building is known as the
+
+- "Owner' This Agreement does not constitute lease or conveyance of any interest in real property to Customer; and no interest in the Customer Area; Data Center; Building or the land on which the Building(s) are located\_ including Digital Realty's associated Equipment and personal
+
+property (the "Property'), other than the right to use the Customer Area as set forth in this Agreement.
+
+(b) Interconnections\_ AII interconnections between Customer Equipment and the equipment of anyone else including the equipment   of any telecommunication carrier or telecommunications service providers; shall be contracted through and installed by Digital Realty and performed in the Building point of presence or meet-me-room area(s) ("Connectivity Area" or MMR")   designated by Digital Realty. Customer may not (i) operate its own Connectivity Area in the Customer Area or any other portion of a Building or refer to the Customer Area as 'meet-me-room' or (ii)   provide carrier neutral interconnection services in the Customer Area or any other portion of the Building.
+
+(c) Policies and Procedures. Customer will (i) have non-exclusive access to the relevant portions of the Building to install Customer Equipment in the Customer Area; (ii) use the Customer Area and Services in compliance with this Agreement and Digital Realty's then-current policies and procedures that its designated users, visitors; contractors and others accessing or using the Building or Services in connection with or on behalf   of, Customer (collectively Customer Authorized Persons also comply with this Agreement and Digital Realty's Building   policies and procedures As between the parties; Customer is responsible for all acts and omissions of Customer Authorized Persons in connection with the Agreement; Building or Services Digital Realty may refuse access to the   Building (including the Customer  Area) to anyone, including Customer Authorized   Persons; if Digital Realty in its reasonable sole discretion determines that person presents a hazard or security threat to Digital Realty or other occupants of the Building or if Customer's rights under Section 3(a) have been suspended or terminated.  All Equipment must be positioned so that it complies with Digital Reality's hot and cold aisle configuration requirements the
+...
+
+Name:
+
+Diane Basile
+Output is truncated. View as a scrollable element or open in a text editor. Adjust cell output settings...
