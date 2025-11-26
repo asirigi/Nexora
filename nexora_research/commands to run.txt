@@ -1,0 +1,9 @@
+
+go to chat seek doc folder for frontend (cd frontend\react\chat-seek-docs)
+npm install
+npm run dev
+
+(.nexora_venv) uvicorn backend.api.fastapi_app:app --reload --port 8000
+
+
+uvicorn backend.app.main:app --reload --port 8000
