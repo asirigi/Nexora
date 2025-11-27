@@ -35,7 +35,12 @@ MANIFEST
 # Installer logs
 pip-log.txt
 pip-delete-this-directory.txt
-
+.nexora_venv
+.myenv
+.venv
+.files
+.chainlit
+.vscode
 # Unit test / coverage reports
 htmlcov/
 .tox/
@@ -142,8 +147,9 @@ env/
 venv/
 ENV/
 env.bak/
+*.pdf
 venv.bak/
-
+node_modules/
 # Spyder project settings
 .spyderproject
 .spyproject

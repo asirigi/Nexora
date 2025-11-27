@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AI Chat Application Design System - Dark Theme */
+
+@layer base {
+  :root {
+    --background: 215 28% 17%;
+    --foreground: 213 31% 91%;
+
+    --card: 216 34% 17%;
+    --card-foreground: 213 31% 91%;
+
+    --popover: 216 34% 17%;
+    --popover-foreground: 213 31% 91%;
+
+    --primary: 217 91% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 217 91% 70%;
+
+    --secondary: 215 25% 27%;
+    --secondary-foreground: 213 31% 91%;
+
+    --muted: 215 25% 27%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 216 87% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 25% 27%;
+    --input: 215 25% 27%;
+    --ring: 217 91% 60%;
+
+    --radius: 0.75rem;
+
+    /* Chat-specific colors */
+    --chat-user: 217 91% 60%;
+    --chat-user-foreground: 0 0% 100%;
+    --chat-assistant: 215 25% 27%;
+    --chat-assistant-foreground: 213 31% 91%;
+    
+    /* Search result colors */
+    --search-result: 215 30% 23%;
+    --search-result-foreground: 213 31% 91%;
+    --search-highlight: 217 91% 60%;
+    
+    /* PDF chat colors */
+    --pdf-chat: 142 76% 36%;
+    --pdf-chat-foreground: 0 0% 100%;
+    --pdf-panel: 215 25% 20%;
+    
+    /* Database colors */
+    --database-primary: 216 100% 60%;
+    --database-primary-foreground: 0 0% 100%;
+    --database-secondary: 142 76% 45%;
+    --database-secondary-foreground: 0 0% 100%;
+    --database-chart: 45 93% 55%;
+    --database-chart-secondary: 280 100% 75%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
+    --gradient-surface: linear-gradient(180deg, hsl(216 34% 17%), hsl(215 28% 17%));
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* Sidebar colors */
+    --sidebar-background: 215 25% 20%;
+    --sidebar-foreground: 213 31% 91%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 25% 27%;
+    --sidebar-accent-foreground: 213 31% 91%;
+    --sidebar-border: 215 25% 27%;
+    --sidebar-ring: 217 91% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--ring));
+  }
+}
+
+/* Chat bubble animations */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes typing {
+  0%, 20% { opacity: 0; }
+  50% { opacity: 1; }
+  80%, 100% { opacity: 0; }
+}
+
+.chat-bubble {
+  animation: slideUp 0.3s ease-out;
+}
+
+.typing-indicator {
+  animation: typing 1.5s infinite;
+}
+
+/* Tab glow effect */
+.tab-glow {
+  position: relative;
+  transition: var(--transition-smooth);
+}
+
+.tab-glow.active::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-primary);
+  border-radius: inherit;
+  padding: 1px;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}

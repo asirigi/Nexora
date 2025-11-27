@@ -1,0 +1,761 @@
+
+
+1. User sends a message  
+   ↓  
+2. Append the message to Cosmos DB  
+   ↓  
+3. Fetch chat history using `user_id` and `session_id`  
+   ↓  
+4. Check total number of messages in history  
+   ↓  
+   ┌──────────── Check ─────────────┐
+   │                                │
+   │  If ≤ 10 messages              │
+   │  → No summarization needed     │
+   │  → Use history[-10:]           │
+   │                                │
+   │  If > 10 messages              │
+   │  → Summarization triggered     │
+   └────────────┬───────────────────┘
+                ↓
+
+5. Split chat history:
+   • Older messages → `history[:-4]`  
+   • Recent messages → `history[-4:]`
+
+6. Call LLM summarizer (`chat_summarizer.py`)  
+   → Input: `history[:-4]`
+
+7. Generate summary of older messages  
+   ↓  
+
+8. Compose final LLM prompt:
+   → `summary + last 4 messages`
+
+9. Send the prompt to the LLM  
+   ↓  
+
+10. Receive LLM response  
+    ↓  
+
+11. Store the response and update Cosmos DB
+
+
+
+I have chainlit frontend or UI , now in chainlit I have made a sign in page, now once user enters its passsword and username, next how azure will be contuining futher.
+
+Integration Flow Summary:
+
+User initiates Sign-up/Sign-in in Chatbot.
+
+Chatbot redirects user to Azure AD B2C.
+
+User completes registration (or signs in) in Azure AD B2C.
+
+For new registrations (Custom Policy): Azure AD B2C's custom policy makes an HTTP call to your Azure Function, passing the new user's unique ID.
+
+Azure Function receives user ID and creates a new container in Azure Blob Storage (if it doesn't already exist) named after the user's ID.
+
+Azure AD B2C issues ID/Access Tokens back to the Chatbot.
+
+Chatbot authenticates the user and receives their unique ID from the token.
+
+Chatbot uses the user's ID to access their dedicated Blob Storage container for storing and retrieving their data.
+
+
+
+
+
+Let's explain how Easy Auth would work with Chainlit, and why it's a different approach from the direct Chainlit-to-Azure AD B2C integration we discussed previously.
+
+How Chainlit and Azure App Service Authentication (Easy Auth) Can Work Together
+
+
+# IMPORTANT: You typically DO NOT configure Chainlit's built-in OAuth
+# when using Easy Auth. Easy Auth is handling the *external* authentication.
+
+
+Flow Diagram 1: Chainlit's Built-in OAuth with Azure AD B2C
+
+
++---------------------------+       +---------------------+       +---------------------+       +-------------------+       +---------------------+
+|        USER (Browser)     |       |   CHAINLIT APP      |       |  AZURE AD B2C       |       | AZURE FUNCTION    |       |   AZURE STORAGE     |
+| (Frontend UI)             |       |   (Backend Server)  |       |                     |       | (Opt. for events) |       |                     |
++---------------------------+       +---------------------+       +---------------------+       +-------------------+       +---------------------+
+            |                               |                               |                               |                             |
+            |   1. Accesses App URL         |                               |                               |                             |
+            +------------------------------>|                               |                               |                             |
+            |                               |                               |                               |                             |
+            |   2. Renders UI, "Sign In"    |                               |                               |                             |
+            |<------------------------------+                               |                               |                             |
+            |                               |                               |                               |                             |
+            |   3. Clicks "Sign In"         |                               |                               |                             |
+            +------------------------------>|                               |                               |                             |
+            |                               | 4. Initiates OAuth Flow       |                               |                             |
+            |                               +------------------------------>|                               |                             |
+            |                               |   <state>, <redirect_uri>     |                               |                             |
+            |                               |                               |                               |                             |
+            |                               | 5. Redirects Browser          |                               |                             |
+            |<-------------------------------------------------------------+                               |                             |
+            |                               |                               |                               |                             |
+            |                               |                               | 6. Displays Login/Sign-up Page|                             |
+            | 7. User Input (New/Return)    |                               |                               |                             |
+            +-------------------------------------------------------------->|                               |                             |
+            |                               |                               | {Is new user/registration?}   |                             |
+            |                               |                               |  YES (via B2C Custom Policy)  |                             |
+            |                               |                               +-------------------------------> 8. Invokes Azure Function   |
+            |                               |                               |                               |   <objectId>, <newUser>     |
+            |                               |                               |                               |                             |
+            |                               |                               |                               | 9. Creates User Container   |
+            |                               |                               |                               |<--------------------------->
+            |                               |                               |                               |   [Create Container]        |
+            |                               |                               |                               |   <Container Name>          |
+            |                               |                               +<------------------------------+                             |
+            |                               |                               | 10. Generates <auth_code>     |                             |
+            |                               |                               |                               |                             |
+            |                               | 11. Redirects Browser         |                               |                             |
+            |<-------------------------------------------------------------+                               |                              |
+            |   <auth_code>, <state>        |                               |                               |                             |
+            |                               | 12. Receives <auth_code>      |                               |                             |
+            |                               +------------------------------>|                               |                             |
+            |                               |   [Validate state]            |                               |                             |
+            |                               | 13. Server-to-Server Token Exch.                                |                           |
+            |                               +------------------------------>|                               |                             |
+            |                               |   <client_id>, <secret>       |                               |                             |
+            |                               |                               | 14. Returns <id_token>, <access_token>                    |
+            |                               +<------------------------------+                               |                             |
+            |                               | 15. [Validate & Parse Tokens] |                               |                             |
+            |                               |   <user_info (objectId)>      |                               |                             |
+            |                               | {Is container already there?} |                               |                             |
+            |                               |  NO                           +-----------------------------------------------------------> 16. [Create Container] (Fallback/Safety)
+            |                               |  YES                          |                               |                             |
+            |                               | 17. [Establish App Session]   |                               |                             |
+            |                               |   <cl.user_session>           |                               |                             |
+            |                               | 18. Redirects Browser to UI   |                               |                             |
+            |<------------------------------+                               |                               |                             |
+            | 19. Chatbot UI loads, Authenticated                           |                               |                             |
+            |                               | 20. cl.on_chat_start triggered|                               |                             |
+            |                               |   <cl.user_session available> |                               |                             |
+            |                               +-----------------------------+                                 |                             |
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Flow Diagram 2: Easy Auth (Azure AD B2C) + Azure Function for Container Creation
+
+
+
+
++---------------------------+       +---------------------+       +---------------------+       +-------------------+       +---------------------+
+|        USER (Browser)     |       |  AZURE APP SERVICE  |       |  AZURE AD B2C       |       | AZURE FUNCTION    |       |   AZURE STORAGE     |
+| (Frontend UI)             |       |  (Easy Auth)        |       |                     |       | (Container Creator)|       |                    |
++---------------------------+       +---------------------+       +---------------------+       +-------------------+       +---------------------+
+            |                               |                               |                               |                             |
+            |   1. Accesses App URL         |                               |                               |                             |
+            +------------------------------>|                               |                               |                             |
+            |                               | 2. Intercepts (unauth) req.   |                               |                             |
+            |                               |   [Detects "Require Auth"]    |                               |                             |
+            |                               | 3. Redirects Browser          |                               |                             |
+            |<-------------------------------------------------------------+                                |                              |
+            |                               |                               |                               |                             |
+            |                               |                               | 4. Displays Login/Sign-up Page|                             |
+            | 5. User Input (New/Return)    |                               |                               |                             |
+            +-------------------------------------------------------------->|                               |                             |
+            |                               |                               | {Is new user/registration?}   |                             |
+            |                               |                               |  YES (via B2C Custom Policy)  |                             |
+            |                               |                               +-------------------------------> 6. Invokes Azure Function   |
+            |                               |                               |                               |   <objectId>, <claims>      |
+            |                               |                               |                               |                             |
+            |                               |                               |                               | 7. Creates User Container   |
+            |                               |                               |                               |<--------------------------->
+            |                               |                               |                               |   [Create Container]        |
+            |                               |                               |                               |   <Container Name>          |
+            |                               |                               +<------------------------------+ 8. Returns success to B2C   |
+            |                               |                               | 9. Generates <id_token>, <access_token>                     |
+            |                               |                               |                               |                             |
+            |                               | 10. Redirects Browser back    |                               |                             |
+            |<------------------------------+   (via Easy Auth callback)    |                               |                             |
+            |                               |                               |                               |                             |
+            |                               | 11. Easy Auth receives tokens |                               |                             |
+            |                               |   [Validates Tokens]          |                               |                             |
+            |                               | 12. [Establishes App Session] |                               |                             |
+            |                               | 13. Injects <user_claims>     |                               |                             |
+            |                               |   (X-MS-CLIENT-PRINCIPAL-ID)  |                               |                             |
+            |                               | 14. Proxies req to Chainlit   |                               |                             |
+            +------------------------------>|       (Internal)              |                               |                             |
+            |                               |                               |                               |                             |
+            |                               +---------------------+         |                               |                             |
+            |                               |  CHAINLIT APP       |         |                               |                             |
+            |                               |  (Backend Server)   |         |                               |                             |
+            |                               +---------------------+         |                               |                             |
+            |                               | 15. Receives request (auth)   |                               |                             |
+            |                               |   [Reads HTTP Headers]        |                               |                             |
+            |                               |   <user_id (objectId)>        |                               |                             |
+            |                               | 16. [Assumes Container Exists]|                               |                             |
+            |                               | 17. [Establishes App Session] |                               |                             |
+            |                               |   <cl.user_session>           |                               |                             |
+            |                               | 18. Renders UI                |                               |                             |
+            |<------------------------------+                               |                               |                             |
+            | 19. Chatbot UI loads, Authenticated                         |                                 |                             |
+            |                               | 20. cl.on_chat_start triggered|                               |                             |
+            |                               |   <cl.user_session available> |                               |                             |
+            |                               +-----------------------------+                                 |                             |
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+	Flow Diagram 3: Easy Auth (Microsoft Entra ID) for Internal Users
+
+			
+			
+			
+			
+			
+			
+			
+			
++---------------------------+       +---------------------+       +---------------------+       +---------------------+       +---------------------+
+|        IT ADMIN/HR        |       |   MICROSOFT         |       | AZURE LOGIC APP/    |       |  AZURE APP SERVICE  |       |   AZURE STORAGE     |
+| (User Provisioning)       |       |   ENTRA ID          |       |   AZURE FUNCTION    |       |  (Easy Auth)        |       |                     |
++---------------------------+       +---------------------+       | (User Create Listener)|       |                     |       |                     |
+            |                               |                     +---------------------+       +---------------------+       +---------------------+
+            |                               |                               |                               |                             |
+            |   1. Creates New User         |                               |                               |                             |
+            +------------------------------>|                               |                               |                             |
+            |                               | 2. Publishes "User Created"   |                               |                             |
+            |                               |   (via Microsoft Graph)       |                               |                             |
+            |                               +------------------------------>| 3. Receives Notification      |                             |
+            |                               |                               |   <objectId>                  |                             |
+            |                               |                               |                               |                             |
+            |                               |                               | 4. Proactively Creates Container                            |
+            |                               |                               +----------------------------------------------------------->
+            |                               |                               |   [Create Container]          |                             |
+            |                               |                               |   <Container Name>            |                             |
+            |                               |                               | 5. Logs/Confirms creation     |                             |
+            |                               |                               +---------------------+         |                             |
+            |                               |                               |                     |         |                             |
+            |                               |                               |                     |         |                             |
++---------------------------+               |                     |         |                               |
+|        USER (Browser)     |               |                     |         |                               |
++---------------------------+               |                     |         |                               |
+            |                               |                     |         |                               |
+            |   6. Accesses App URL         |                     |         |                               |
+            +-------------------------------------------------------------->| 7. Intercepts (unauth) req.   |                             |
+            |                               |                     |         |   [Detects "Require Auth"]    |                             |
+            |                               |                     |         | 8. Redirects Browser          |                             |
+            |<-------------------------------------------------------------+                                |                             |
+            |                               |                     |         |                               |                             |
+            |                               | 9. Displays Corporate Login   |                               |                             |
+            | 10. User Input (Credentials)  |                     |         |                               |                             |
+            +-------------------------------------------------------------->| 11. Authenticates User        |                             |
+            |                               |                     |         |                               |                             |
+            |                               | 12. Generates <id_token>, <access_token>                      |                             |
+            |                               |                     |         |                               |                             |
+            |                               |                     |         | 13. Redirects Browser back    |                             |
+            |<-------------------------------------------------------------+   (via Easy Auth callback)    |                             |
+            |                               |                     |         |                               |                             |
+            |                               |                     |         | 14. Easy Auth receives tokens |                             |
+            |                               |                     |         |   [Validates Tokens]          |                             |
+            |                               |                     |         | 15. [Establishes App Session] |                             |
+            |                               |                     |         | 16. Injects <user_claims>     |                             |
+            |                               |                     |         |   (X-MS-CLIENT-PRINCIPAL-ID)  |                             |
+            |                               |                     |         | 17. Proxies req to Chainlit   |                             |
+            +-------------------------------------------------------------->|       (Internal)              |                             |
+            |                               |                     |         +---------------------+       |                             |
+            |                               |                     |         |  CHAINLIT APP       |       |                             |
+            |                               |                     |         |  (Backend Server)   |       |                             |
+            |                               |                     |         +---------------------+       |                             |
+            |                               |                     |         | 18. Receives request (auth)   |                             |
+            |                               |                     |         |   [Reads HTTP Headers]        |                             |
+            |                               |                     |         |   <user_id (objectId)>        |                             |
+            |                               |                     |         | 19. [Assumes Container Exists]|                             |
+            |                               |                     |         | 20. [Establishes App Session] |                             |
+            |                               |                     |         |   <cl.user_session>           |                             |
+            |                               |                     |         | 21. Renders UI                |                             |
+            |<-------------------------------------------------------------+                               |                             |
+            | 22. Chatbot UI loads, Authenticated                       |                               |                             |
+            |                               | 23. cl.on_chat_start triggered|                               |                             |
+            |                               |   <cl.user_session available> |                               |                             |
+            |                               +-----------------------------+                               |                             |
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+	CREATING VIRTUAL ENVIRONMENT
+
+
+A good HLD clarifies your design and makes you think about the details before you start coding. This also helps you avoid repetitive work.
+
+HLD is the big picture of the solution.
+The purpose of HLD is to provide a common understanding of the system’s architecture among all stakeholders.
+
+The key to writing a good HLD is to write it in the form a story, a story so good that the reader is engaged with its plot, the backstories of the characters and is on the edge of his/her seat with every plot twist(Okey we don’t have to go as far as adding plot twists). The idea is to keep the keep the design simple to understand, easy to follow and clear about assumptions and tradeoffs. So naturally the first step is knowing your audience. A good HLD should be able to communicate your thoughts to your expected audience.
+
+
+
+This is a local AI-powered assistant that helps manufacturing facility managers search for skilled workers (like plumbers, welders, etc.) using natural language queries. It uses LLMs for understanding, AstraDB for vector search, and SQLite for structured queries.
+
+User: The end-user interacts with the system through the Chainlit UI.
+
+
+
+Chainlit UI: Captures user input and displays responses.
+
+
+
+Intent Classifier (LLM): Uses an LLM to determine the user's intent.
+
+
+
+Worker Search: Identifies the appropriate worker(s) based on the classified intent, querying both the Vector DB and SQL DB.
+
+
+
+Vector DB: Stores vector embeddings of worker capabilities.
+
+
+
+SQL DB: Stores structured data about workers.
+
+
+
+Worker 1/Worker 2: Represents different workers that can handle the request.
+
+
+
+Memory Layer: Caches frequently accessed data to improve response times.
+
+
+
+Response: The final response generated by the worker(s) and cached in the Memory Layer.
+
+
+1. System Architecture
+
+
+
+The system architecture is designed to handle user requests efficiently and accurately, leveraging a combination of LLMs, vector databases, SQL databases, and a memory layer. The following block diagrams illustrate the key components and their interactions.
+docume
+MDM
+lease stats
+POC contracts
+blog
+Repairs and services POC
+Certfication ANdrew NG 50 
+
+
+team collaboration.
+reach out to Abhi for sure.
+HLD
+ONE BY ONE -  SOFT SKILLS - try to explain - communicatin what they need.
+highlight on the main point what prospect is asking
+
+
+
+
+It contains a query_llm_with_template intent detection will detect the intent and if the intent is search astra db then worker template and input query will be passed to query_llm_with_template function
+this function will set and Dynamically construct and format a prompt from a base template.
+Call GROQ’s hosted Gemma2-9b-it model with that prompt.
+Receive a structured or conversational response based on the LLM's capabilities.
+
+
+MANUFACTURING WORKFORCE ASSISTANT BOT ARCHITECTURE 
+
+
+
+
+
+
+
+
+
+
+
+
+
+(User logs in)
+      │
+      ▼
+(Uploads files via Chainlit)
+      │
+      ├─▶ PDFs/TXT → chunk → embed → vector DB
+      └─▶ CSV/Excel → table agent → profile summary
+
+      ▼
+(Upload to Azure Blob with username/timestamp)
+      ▼
+(Save session in SQLite)
+      ▼
+(Show sessions in sidebar after login)
+      ▼
+(Click session → loads chunks for chat/RAG)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(START)
+   │
+   ▼
+[User Logs In]
+   │
+   ▼
+[Fetch All Sessions for user_id from SQLite]
+   │
+   ▼
+[User Clicks on a Session → session_id = "abc123"]
+   │
+   ▼
+[Initialize Workspace for session_id "abc123"]
+   │
+   ▼
+[→ Fetch Stored Data Sources]
+   │
+   ├──► [Fetch PDF Chunks from Vector DB]
+   │        └── query: where session_id = "abc123", filename LIKE *.pdf
+   │        └── result: List of document chunks, headings, metadata
+   │
+   └──► [Fetch CSV Profile Metadata]
+            ├── Option 1: From Vector DB (stored under special metadata)
+            └── Option 2: From SQLite Table `csv_profiles`
+                       where user_id = "deepankar" AND filename = "attendance.csv"
+
+   ▼
+[Store Retrieved Data in Memory for Session (not chunk content, just pointers)]
+   │
+   ▼
+[User Asks a Question]
+   │
+   ▼
+[LLM Router / SK Planner Decides Route]
+   │
+   ├──► If tabular logic detected → route to Table Agent using CSV Profile
+   │
+   └──► Else → route to PDF Vector Search
+            └── query in vectorstore where session_id = "abc123" + similarity
+   │
+   ▼
+[LLM Generates Answer based on Retrieved Info]
+   │
+   ▼
+[Display Response in Chat UI]
+   │
+   ▼
+(END)
+
+
+ git config --global user.email "DeepankarBigData"
+ git config --global user.name "Deepankar"
+ 
+ 
+ 
+ 
+For simple text PDFs → Traditional chunking (cheap, fast)
+
+For moderately structured docs → Marker, DocLink, Unstructured (mid-cost, semi-intelligent)
+
+For complex layouts or scanned PDFs → LayoutLM, DiT, Donut (accurate but GPU/OCR expensive)
+
+
+
+
+
+[ User Question ]
+       ↓
+[ Embedding Model ]
+       ↓
+[ ChromaDB → top-k chunks ]
+       ↓
+[ Semantic Reranker (cross-encoder or LLM) ]
+       ↓
+[ Sorted Chunks → Final Context ]
+       ↓
+[ LLM Generates Answer ]
+
+
+
+
+
+You have an Azure subscription that contains an Azure AI Document Intelligence resource named AIdoc1.
+
+You have an app named App1 that uses AIdoc1. App1 analyzes business cards by calling business card model v2.1.
+
+You need to update App1 to ensure that the app can interpret QR codes. The solution must minimize administrative effort.
+
+What should you do first?
+
+
+eg(s76W<zHqM)x"
+
+
+2,48,23,09,267.70
+
+
+1. User sends a message  
+   ↓  
+2. Append the message to Cosmos DB  
+   ↓  
+3. Fetch chat history using `user_id` and `session_id`  
+   ↓  
+4. Check total number of messages in history  
+   ↓  
+   ┌──────────── Check ─────────────┐
+   │                                │
+   │  If ≤ 10 messages              │
+   │  → No summarization needed     │
+   │  → Use history[-10:]           │
+   │                                │
+   │  If > 10 messages              │
+   │  → Summarization triggered     │
+   └────────────┬───────────────────┘
+                ↓
+
+5. Split chat history:
+   • Older messages → `history[:-4]`  
+   • Recent messages → `history[-4:]`
+
+6. Call LLM summarizer (`chat_summarizer.py`)  
+   → Input: `history[:-4]`
+
+7. Generate summary of older messages  
+   ↓  
+
+8. Compose final LLM prompt:
+   → `summary + last 4 messages`
+
+9. Send the prompt to the LLM  
+   ↓  
+
+10. Receive LLM response  
+    ↓  
+
+11. Store the response and update Cosmos DB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(START)
+   │
+   ▼
+[User Logs In]
+   │
+   ▼
+[Fetch All Sessions for user_id from SQLite]
+   │
+   ▼
+[User Clicks on a Session → session_id = "abc123"]
+   │
+   ▼
+[Initialize Workspace for session_id "abc123"]
+   │
+   ▼
+[→ Fetch Stored Data Sources]
+   │
+   ├──► [Fetch PDF Chunks from Vector DB]
+   │        └── query: where session_id = "abc123", filename LIKE *.pdf
+   │        └── result: List of document chunks, headings, metadata
+   │
+   └──► [Fetch CSV Profile Metadata]
+            ├── Option 1: From Vector DB (stored under special metadata)
+            └── Option 2: From SQLite Table `csv_profiles`
+                       where user_id = "deepankar" AND filename = "attendance.csv"
+
+   ▼
+[Store Retrieved Data in Memory for Session (not chunk content, just pointers)]
+   │
+   ▼
+[User Asks a Question]
+   │
+   ▼
+[LLM Router / SK Planner Decides Route]
+   │
+   ├──► If tabular logic detected → route to Table Agent using CSV Profile
+   │
+   └──► Else → route to PDF Vector Search
+            └── query in vectorstore where session_id = "abc123" + similarity
+   │
+   ▼
+[LLM Generates Answer based on Retrieved Info]
+   │
+   ▼
+[Display Response in Chat UI]
+   │
+   ▼
+(END)
+
+
+
+
+[User clicks "Session: 2024-07-21 | abc123"] 
+      ↓
+[Call vectorstore.get(where={"session_id": "abc123"})] 
+      ↓
+[Returns: all chunks, metadata for that session]
+      ↓
+[You display it, or scope search to it]
+
+
+
+
+User uploads CSV
+   ↓
+Check if profile exists (by user_id + filename)
+   ↓
+If not → Generate profile → Save to SQLite or VectorDB metadata
+   ↓
+If yes  → Load existing profile
+
+
+
+
+🤖 Optional: Use FREE LLM for Natural Language Summary
+Use a free local LLM (e.g., LLaMA.cpp or HuggingFace Transformers) to turn top 5 into natural language summaries:
+
+python
+Copy
+Edit
+from transformers import pipeline
+
+summarizer = pipeline("text-generation", model="tiiuae/falcon-7b-instruct")
+
+# Flatten and feed tabular insight
+prompt = f"Summarize key insights from this top 5 policy data:\n{top_policy.to_string()}"
+summary = summarizer(prompt, max_new_tokens=200)[0]['generated_text']
+
+
+
+
+
+https://docling-project.github.io/docling/examples/hybrid_chunking/#configuring-tokenization
+
+
+
+
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+sentences = nltk.sent_tokenize(text)
+
+Raw Document (Markdown or Text)
+    │
+    ▼
+Split by "##" Headings  ───▶  [Chunk 1, Chunk 2, Chunk 3...]
+    │
+    ├─▶ Further chunk if > token limit
+    │
+    ├─▶ Attach metadata (heading, source, index)
+    │
+    ├─▶ Embed using BGE / E5 / OpenAI
+    │
+    ├─▶ Store (Vector DB + metadata)
+    │
+    └─▶ Rerank if needed (optional)
